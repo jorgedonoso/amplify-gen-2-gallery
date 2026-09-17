@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-
+import { getUrl } from "aws-amplify/storage";
 import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import outputs from "../amplify_outputs.json";
@@ -13,7 +13,9 @@ const dataClient = generateClient<Schema>();
 const PAGE_SIZE = 1000;
 
 function App() {
-  const [profiles, setProfiles] = useState<Schema["Profile"]["type"][]>([]);
+  const [profiles, setProfiles] = useState<
+    (Schema["Profile"]["type"] & { imageUrl: string })[]
+  >([]);
   const [nextToken, setNextToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -113,7 +115,18 @@ function App() {
     if (errors) {
       console.error(errors);
     } else {
-      setProfiles(data);
+      const profilesWithUrls = await Promise.all(
+        data.map(async (profile) => ({
+          ...profile,
+          imageUrl: (
+            await getUrl({
+              path: `public/${profile.image}`,
+            })
+          ).url.toString(),
+        })),
+      );
+
+      setProfiles(profilesWithUrls);
       setNextToken(newToken ?? null);
     }
 
@@ -367,12 +380,11 @@ function App() {
               <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
                 {profiles.map((profile) => (
                   <div key={profile.id}>
-                    {/* <img
-                      src={profile.image}
+                    <img
+                      src={profile.imageUrl}
                       alt=""
                       className="aspect-square w-full rounded object-cover"
-                    /> */}
-                    {profile.image.substring(5, 10)}
+                    />
                   </div>
                 ))}
               </div>
