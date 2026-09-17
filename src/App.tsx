@@ -5,6 +5,7 @@ import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import outputs from "../amplify_outputs.json";
 import type { Schema } from "../amplify/data/resource";
+import Results from "./feature/browse/Results";
 
 Amplify.configure(outputs);
 
@@ -12,10 +13,18 @@ const dataClient = generateClient<Schema>();
 
 const PAGE_SIZE = 1000;
 
+type RawProfile = Schema["Profile"]["type"];
+
+type CleanProfile = {
+  [K in keyof RawProfile as string extends K ? never : K]: RawProfile[K];
+};
+
+type ProfileWithUrl = CleanProfile & {
+  imageUrl: string;
+};
+
 function App() {
-  const [profiles, setProfiles] = useState<
-    (Schema["Profile"]["type"] & { imageUrl: string })[]
-  >([]);
+  const [profiles, setProfiles] = useState<ProfileWithUrl[]>([]);
   const [nextToken, setNextToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -115,7 +124,7 @@ function App() {
     if (errors) {
       console.error(errors);
     } else {
-      const profilesWithUrls = await Promise.all(
+      const profilesWithUrls: ProfileWithUrl[] = await Promise.all(
         data.map(async (profile) => ({
           ...profile,
           imageUrl: (
@@ -371,36 +380,12 @@ function App() {
           </aside>
 
           {/* Results */}
-          <section className="rounded bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-900">Results</h2>
-
-            {profiles.length === 0 ? (
-              <p className="mt-2 text-gray-600">No results.</p>
-            ) : (
-              <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                {profiles.map((profile) => (
-                  <div key={profile.id}>
-                    <img
-                      src={profile.imageUrl}
-                      alt=""
-                      className="aspect-square w-full rounded object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                disabled={!nextToken || loading}
-                onClick={() => loadProfiles(nextToken)}
-                className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-              >
-                {loading ? "Loading..." : "Next"}
-              </button>
-            </div>
-          </section>
+          <Results
+            profiles={profiles}
+            nextToken={nextToken}
+            loading={loading}
+            loadProfiles={loadProfiles}
+          />
         </section>
       </div>
     </main>
