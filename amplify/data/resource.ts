@@ -40,7 +40,7 @@ const schema = a.schema({
       // Confidence / quality
       bugProbability: a.float(),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.guest().to(["read"])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
