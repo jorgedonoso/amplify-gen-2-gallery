@@ -11,7 +11,7 @@ import Results from "./feature/browse/Results";
 Amplify.configure(outputs);
 
 const dataClient = generateClient<Schema>();
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 10;
 
 type RawProfile = Schema["Profile"]["type"];
 
