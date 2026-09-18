@@ -58,7 +58,7 @@ function Filters({ loading, onApply }: FiltersProps) {
     }
 
     if (hairColor.length === 1) {
-      filter.hairColor = { eq: hairColor[0] };
+      filter.hairColor = { eq: hairColor[0].toLowerCase() };
     }
 
     if (hairLength.length === 1) {
