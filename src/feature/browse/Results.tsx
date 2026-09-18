@@ -1,3 +1,5 @@
+import ProfileCard from "./ProfileCard";
+
 type Profile = {
   id: string;
   imageUrl: string;
@@ -18,15 +20,9 @@ function Results({ profiles, nextToken, loading, loadProfiles }: ResultsProps) {
       {profiles.length === 0 ? (
         <p className="mt-2 text-gray-600">No results.</p>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
           {profiles.map((profile) => (
-            <div key={profile.id}>
-              <img
-                src={profile.imageUrl}
-                alt=""
-                className="aspect-square w-full rounded object-cover"
-              />
-            </div>
+            <ProfileCard key={profile.id} profile={profile} />
           ))}
         </div>
       )}
