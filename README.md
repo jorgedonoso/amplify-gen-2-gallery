@@ -23,6 +23,8 @@ Browse and filter a collection of generated profiles by attributes such as:
 
 Each profile displays its generated photo along with the associated attributes.
 
+![Demo](./docs/demo.png)
+
 ## Tech Stack
 
 - **React** — UI
