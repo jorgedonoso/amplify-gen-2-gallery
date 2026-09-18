@@ -31,25 +31,73 @@ function App() {
 
   const loadProfiles = async (
     token: string | null = null,
-    filter = activeFilter,
+    filter: Record<string, any> = activeFilter,
   ) => {
     setLoading(true);
 
-    const {
-      data,
-      nextToken: newToken,
-      errors,
-    } = await dataClient.models.Profile.list({
-      limit: PAGE_SIZE,
-      nextToken: token ?? undefined,
-      filter,
-    });
+    // Extract demographic parameters
+    const { __demographics, ...remainingFilters } = filter;
+    const gender = __demographics?.gender;
+    const ethnicity = __demographics?.ethnicity;
+    const minAge = __demographics?.minAge;
+    const maxAge = __demographics?.maxAge;
 
-    if (errors) {
-      console.error(errors);
-    } else {
+    // Build Age Range object for Sort Key
+    let ageQuery: Record<string, number | number[]> | undefined;
+    if (minAge !== null && maxAge !== null) {
+      ageQuery = { between: [minAge, maxAge] };
+    } else if (minAge !== null) {
+      ageQuery = { ge: minAge };
+    } else if (maxAge !== null) {
+      ageQuery = { le: maxAge };
+    }
+
+    try {
+      let rawProfiles: RawProfile[] = [];
+      let nextTokenResult: string | null = null;
+
+      // Use GSI query if both Gender and Ethnicity are selected
+      if (gender && ethnicity) {
+        const compositeKey = `${gender}#${ethnicity.toLowerCase()}`;
+
+        const response =
+          await dataClient.models.Profile.listProfilesByDemographicAndAge(
+            {
+              genderEthnicity: compositeKey,
+              ...(ageQuery && { age: ageQuery }),
+            },
+            {
+              limit: PAGE_SIZE,
+              nextToken: token ?? undefined,
+              filter:
+                Object.keys(remainingFilters).length > 0
+                  ? remainingFilters
+                  : undefined,
+            },
+          );
+
+        if (response.errors) console.error(response.errors);
+        rawProfiles = response.data;
+        nextTokenResult = response.nextToken ?? null;
+      } else {
+        // Fallback to standard table query if demographics aren't fully selected
+        const response = await dataClient.models.Profile.list({
+          limit: PAGE_SIZE,
+          nextToken: token ?? undefined,
+          filter:
+            Object.keys(remainingFilters).length > 0
+              ? remainingFilters
+              : undefined,
+        });
+
+        if (response.errors) console.error(response.errors);
+        rawProfiles = response.data;
+        nextTokenResult = response.nextToken ?? null;
+      }
+
+      // Resolve Image URLs
       const profilesWithUrls: ProfileWithUrl[] = await Promise.all(
-        data.map(async (profile) => ({
+        rawProfiles.map(async (profile) => ({
           ...profile,
           imageUrl: (
             await getUrl({
@@ -60,10 +108,12 @@ function App() {
       );
 
       setProfiles(profilesWithUrls);
-      setNextToken(newToken ?? null);
+      setNextToken(nextTokenResult);
+    } catch (err) {
+      console.error("Error loading profiles:", err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const applyFilters = (filter: Record<string, unknown>) => {

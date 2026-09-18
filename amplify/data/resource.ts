@@ -5,6 +5,9 @@ const schema = a.schema({
     .model({
       image: a.string().required(),
 
+      // Composite Partition Key.
+      genderEthnicity: a.string(),
+
       // Basic
       gender: a.string(),
       age: a.float(),
@@ -40,6 +43,12 @@ const schema = a.schema({
       // Confidence / quality
       bugProbability: a.float(),
     })
+    .secondaryIndexes((index) => [
+      // Primary GSI: Gender + Ethnicity as PK, Age as SK.
+      index("genderEthnicity")
+        .sortKeys(["age"])
+        .queryField("listProfilesByDemographicAndAge"),
+    ])
     .authorization((allow) => [allow.guest().to(["read"])]),
 });
 
